@@ -1,10 +1,10 @@
 local speaker = peripheral.find("speaker")
 if (not speaker) then error("error: speaker not found") end
 
-local success, httpPlayer = pcall(require, "httpPlayer")
+local success, urlPlayer = pcall(require, "urlPlayer")
 if (not success) then
-    shell.run("wget https://github.com/noodle2521/computercraft/raw/main/httpPlayer.lua httpPlayer.lua")
-    httpPlayer = require("httpPlayer")
+    shell.run("wget https://github.com/noodle2521/brisket-player/raw/refs/heads/main/http-player.lua urlPlayer.lua")
+    urlPlayer = require("urlPlayer")
 end
 
 
@@ -108,7 +108,7 @@ end
 local function playSongWithUI(url, prevName, nextName, doAutoExit)
     doAutoExit = doAutoExit or true
 
-    local allowSeek, audioByteLength = httpPlayer.pollUrl(url)
+    local allowSeek, audioByteLength = urlPlayer.pollUrl(url)
     if (allowSeek == nil) then
         return
     end
@@ -123,7 +123,7 @@ local function playSongWithUI(url, prevName, nextName, doAutoExit)
 
     local function playSong()
         if (not paused) then
-            local interrupt = httpPlayer.playFromUrl(url, "song_interrupt", "chunk_queued", playbackOffset, allowSeek, audioByteLength)
+            local interrupt = urlPlayer.playFromUrl(url, "song_interrupt", "chunk_queued", playbackOffset, allowSeek, audioByteLength)
             if (not interrupt) then
                 if (doAutoExit) then
                     exit = true
@@ -140,7 +140,7 @@ local function playSongWithUI(url, prevName, nextName, doAutoExit)
     local function updateLastChunk()
         while true do
             _, lastChunkByteOffset, _ = os.pullEvent("chunk_queued")
-            lastChunkByteOffset = math.max(lastChunkByteOffset - httpPlayer.chunkSize, 0) -- awful nightmare duct tape solution to fix pausing but it is what it is
+            lastChunkByteOffset = math.max(lastChunkByteOffset - urlPlayer.chunkSize, 0) -- awful nightmare duct tape solution to fix pausing but it is what it is
         end
     end
 

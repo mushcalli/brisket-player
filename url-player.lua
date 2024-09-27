@@ -4,11 +4,11 @@ local speaker
 
 local decoder = dfpwm.make_decoder()
 
-local httpPlayer = {}
+local urlPlayer = {}
 
 -- (chunkSize can be decreased on faster internet connections for faster initial buffering on song playback, or increased on slower ones for more consistent playback)
 -- (max 16 * 1024)
-httpPlayer.chunkSize = 16 * 1024
+urlPlayer.chunkSize = 16 * 1024
 
 
 local function playChunk(chunk, interruptEvent)
@@ -36,16 +36,16 @@ local function streamFromUrl(audioUrl, startOffset, audioByteLength, interruptEv
 
     local i = startOffset
     local prev_i
-    --local maxByteOffset = httpPlayer.chunkSize * math.floor(audioByteLength / httpPlayer.chunkSize)
-    local maxByteOffset = audioByteLength - math.fmod(audioByteLength, httpPlayer.chunkSize)
+    --local maxByteOffset = urlPlayer.chunkSize * math.floor(audioByteLength / urlPlayer.chunkSize)
+    local maxByteOffset = audioByteLength - math.fmod(audioByteLength, urlPlayer.chunkSize)
 
-    local rangeEnd = math.min(i + httpPlayer.chunkSize - 1, audioByteLength - 1)
+    local rangeEnd = math.min(i + urlPlayer.chunkSize - 1, audioByteLength - 1)
     --local chunkHandle, chunkErr = http.get(audioUrl, {["If-Unmodified-Since"] = startTimestamp, ["Range"] = "bytes=0-" .. rangeEnd})
     local chunkHandle, chunkErr = http.get(audioUrl, {["Range"] = "bytes=" .. i .. "-" .. rangeEnd})
-    if (audioByteLength - startOffset > httpPlayer.chunkSize) then
+    if (audioByteLength - startOffset > urlPlayer.chunkSize) then
         prev_i = i
-        i = i + httpPlayer.chunkSize
-        rangeEnd = math.min((i + httpPlayer.chunkSize) - 1, audioByteLength - 1)
+        i = i + urlPlayer.chunkSize
+        rangeEnd = math.min((i + urlPlayer.chunkSize) - 1, audioByteLength - 1)
         --local nextChunkHandle, nextErr = http.get(audioUrl, {["If-Unmodified-Since"] = startTimestamp, ["Range"] = "bytes=" .. i .. "-" .. rangeEnd})
         local nextChunkHandle, nextErr = http.get(audioUrl, {["Range"] = "bytes=" .. i .. "-" .. rangeEnd})
         while (i <= maxByteOffset) do
@@ -109,8 +109,8 @@ local function streamFromUrl(audioUrl, startOffset, audioByteLength, interruptEv
             chunkHandle.close()
             chunkHandle = nextChunkHandle
             prev_i = i
-            i = i + httpPlayer.chunkSize
-            rangeEnd = math.min(i + httpPlayer.chunkSize - 1, audioByteLength - 1)
+            i = i + urlPlayer.chunkSize
+            rangeEnd = math.min(i + urlPlayer.chunkSize - 1, audioByteLength - 1)
             --nextChunkHandle, nextErr = http.get(audioUrl, {["If-Unmodified-Since"] = startTimestamp, ["Range"] = "bytes=" .. i .. "-" .. rangeEnd})
             nextChunkHandle, nextErr = http.get(audioUrl, {["Range"] = "bytes=" .. i .. "-" .. rangeEnd})
         end
@@ -130,7 +130,7 @@ local function streamFromUrl(audioUrl, startOffset, audioByteLength, interruptEv
 end
 
 -- returns true on interrupt, false otherwise
-function httpPlayer.playFromUrl(audioUrl, interruptEvent, chunkQueuedEvent, startOffset, usePartialRequests, audioByteLength)
+function urlPlayer.playFromUrl(audioUrl, interruptEvent, chunkQueuedEvent, startOffset, usePartialRequests, audioByteLength)
     -- chunkQueuedEvent optional, if given will send that event just before playing each chunk, along with { chunk byte offset, chunk queued time (based on os.clock()) }
     -- last 2 args optional, only to be used if url has been polled externally
 
@@ -142,7 +142,7 @@ function httpPlayer.playFromUrl(audioUrl, interruptEvent, chunkQueuedEvent, star
 
     -- if not provided, poll url for usePartialRequests, audioByteLength
     if (usePartialRequests == nil or audioByteLength == nil) then
-        local pollResponse, polledLength = httpPlayer.pollUrl(audioUrl)
+        local pollResponse, polledLength = urlPlayer.pollUrl(audioUrl)
 
         if (pollResponse == nil) then -- if pollUrl returned error, exit
             return false
@@ -170,7 +170,7 @@ function httpPlayer.playFromUrl(audioUrl, interruptEvent, chunkQueuedEvent, star
             return
         end
 
-        local chunk = response.read(httpPlayer.chunkSize)
+        local chunk = response.read(urlPlayer.chunkSize)
         local i = 0
         while (chunk) do
             if (chunkQueuedEvent) then
@@ -184,8 +184,8 @@ function httpPlayer.playFromUrl(audioUrl, interruptEvent, chunkQueuedEvent, star
                 return true
             end
 
-            chunk = response.read(httpPlayer.chunkSize)
-            i = i + httpPlayer.chunkSize
+            chunk = response.read(urlPlayer.chunkSize)
+            i = i + urlPlayer.chunkSize
         end
 
         -- close response handle when done
@@ -197,7 +197,7 @@ end
 --- returns { supportsPartialRequests, audioByteLength }
 -- { false, nil } if partial requests not supported
 -- { nil, err } if error (invalid url/get failed)
-function httpPlayer.pollUrl(audioUrl)
+function urlPlayer.pollUrl(audioUrl)
     -- head request
     http.request({url = audioUrl, method = "HEAD"})
     local event, _url, response
@@ -244,4 +244,4 @@ function httpPlayer.pollUrl(audioUrl)
 end
 
 
-return httpPlayer
+return urlPlayer
