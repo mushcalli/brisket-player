@@ -95,6 +95,14 @@ local function updatePlaylistsOnSongDelete(removedSongIndex)
             end
         end
     end
+
+    updateCache(playlists, playlistsPath)
+end
+
+local function updatePlaylistsOnNewSong()
+    table.insert(playlists[1], #songList) -- add latest song to global playlist
+
+    updateCache(playlists, playlistsPath)
 end
 
 local function removeFromPlaylist(removedSongIndex, playlistIndex)
@@ -221,7 +229,8 @@ local function songListUI()
         table.insert(playlists[currentPlaylist], #songList)
 
         updateCache(songList, songListPath)
-        updateCache(playlists, playlistsPath)
+        updatePlaylistsOnNewSong()
+        --updateCache(playlists, playlistsPath)
     end
     if (key == keys.e) then
         print("which one? (1-0)")
@@ -270,9 +279,9 @@ local function songListUI()
             if (songQueue[num]) then
                 print("removing " .. songQueue[num][1])
                 table.remove(songList, tonumber(playlists[currentPlaylist][num + 1]))
-                updatePlaylistsOnSongDelete(playlists[currentPlaylist][num + 1])
                 updateCache(songList, songListPath)
-                updateCache(playlists, playlistsPath)
+                updatePlaylistsOnSongDelete(playlists[currentPlaylist][num + 1])
+                --updateCache(playlists, playlistsPath)
                 os.sleep(1)
             end
         end
@@ -331,7 +340,7 @@ local function songListUI()
                 until playlists[input + 1]
 
                 removeFromPlaylist(playlists[currentPlaylist][num], currentPlaylist)
-                updateCache(playlists, playlistsPath)
+                --updateCache(playlists, playlistsPath)
             end
         end
     end
@@ -360,7 +369,7 @@ local function playlistsUI()
             end
 
             if (i == currentPlaylist) then
-                print(" > " .. playlists[i][1])
+                print(">. " .. playlists[i][1])
                 break
             end
 
@@ -378,6 +387,11 @@ local function playlistsUI()
     end
     if (digit > 0 and #playlists > 1) then
         local num = digit + (playlistPageOffset * 10) + 1
+
+        if (currentPlaylist == num) then
+            currentPlaylist = 1
+            return
+        end
 
         if (playlists[num]) then
             currentPlaylist = num
@@ -452,11 +466,16 @@ local function playlistsUI()
                 print("removing " .. playlists[num][1])
                 table.remove(playlists, num)
                 updateCache(playlists, playlistsPath)
+
+                if (currentPlaylist == num) then
+                    currentPlaylist = 1
+                end
+
                 os.sleep(1)
             end
         end
     end
-    if (key == keys.tab) then
+    if (key == keys.tab or key == keys.x) then
         -- enter songListUI
         uiLayer = 1
     end
@@ -663,12 +682,10 @@ readCache(songList, songListPath)
 -- read from playlists.txt if exists
 readCache(playlists, playlistsPath)
 
--- if playlists empty, build global playlist as first entry
-if (#playlists == 0) then
-    playlists[1] = {"songs"}
-    for i=1, #songList do
-        table.insert(playlists[1], i)
-    end
+-- build global playlist as first entry
+playlists[1] = {"songs"}
+for i=1, #songList do
+    table.insert(playlists[1], i)
 end
 
 -- generate sortedPlaylists for faster contains check
