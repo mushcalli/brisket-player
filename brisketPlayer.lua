@@ -488,7 +488,7 @@ local function songPlayerUI()
 
     local songLength = math.floor(audioByteLength / bytesPerSecond)
 
-    local continue = false
+    local exit = false
     local paused = false
     local playbackOffset = 0
     local lastChunkByteOffset = 0
@@ -529,7 +529,7 @@ local function songPlayerUI()
     end
 
     local function songUI()
-        continue = false
+        exit = false
 
         local key, keyPressed
         local timer = os.startTimer(1)
@@ -615,7 +615,7 @@ local function songPlayerUI()
                 end
 
                 os.queueEvent("song_interrupt")
-                continue = true
+                exit = true
             end
             if (key == keys.k) then
                 if (queuePos < #songQueue) then
@@ -625,7 +625,7 @@ local function songPlayerUI()
                 end
 
                 os.queueEvent("song_interrupt")
-                continue = true
+                exit = true
             end
             if (key == keys.r) then
                 if (not shuffle) then
@@ -656,15 +656,15 @@ local function songPlayerUI()
             if (key == keys.x) then
                 os.queueEvent("song_interrupt")
                 uiLayer = 1
-                continue = true
+                exit = true
             end
         end
     end
 
 
-    while true do
+    repeat
         parallel.waitForAny(playSong, songUI, updateLastChunk)
-    end
+    until exit
     --os.sleep(0.5)
 end
 
