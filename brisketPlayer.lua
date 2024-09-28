@@ -68,9 +68,11 @@ local function updatePlaylistsOnSongDelete(removedSongIndex)
             print(id .. ", " .. removedSongIndex)
             if (id == removedSongIndex) then
                 table.remove(line, i + 1)
+                print("removed")
             end
             if (id > removedSongIndex) then
                 line[i + 1] = id - 1;
+                print("decremented")
             end
         end
     end
@@ -486,7 +488,7 @@ local function songPlayerUI()
 
     local songLength = math.floor(audioByteLength / bytesPerSecond)
 
-    --local continue = false
+    local continue = false
     local paused = false
     local playbackOffset = 0
     local lastChunkByteOffset = 0
@@ -527,7 +529,7 @@ local function songPlayerUI()
     end
 
     local function songUI()
-        --continue = false
+        continue = false
 
         local key, keyPressed
         local timer = os.startTimer(1)
@@ -613,8 +615,7 @@ local function songPlayerUI()
                 end
 
                 os.queueEvent("song_interrupt")
-                --continue = true
-                return
+                continue = true
             end
             if (key == keys.k) then
                 if (queuePos < #songQueue) then
@@ -624,8 +625,7 @@ local function songPlayerUI()
                 end
 
                 os.queueEvent("song_interrupt")
-                --continue = true
-                return
+                continue = true
             end
             if (key == keys.r) then
                 if (not shuffle) then
@@ -656,8 +656,7 @@ local function songPlayerUI()
             if (key == keys.x) then
                 os.queueEvent("song_interrupt")
                 uiLayer = 1
-                --continue = true
-                return
+                continue = true
             end
         end
     end
