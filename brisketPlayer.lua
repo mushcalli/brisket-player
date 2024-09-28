@@ -307,11 +307,15 @@ local function songListUI()
 
                 local input
                 repeat
-                    print("to which playlist? (1-" .. #playlists .. ")")
-                    input = tonumber(read())
-                until playlists[input + 1]
+                    print("to which playlist? (1-" .. #playlists - 1 .. ")")
+                    input = read()
+                    if (input == "") then
+                        return
+                    end
+                    input = tonumber(input)
+                until input and playlists[input + 1]
 
-                table.insert(playlists[input + 1], tonumber(playlists[currentPlaylist][num]))
+                table.insert(playlists[input + 1], tonumber(playlists[currentPlaylist][num + 1]))
                 updateCache(playlists, playlistsPath)
             end
         end
@@ -336,11 +340,15 @@ local function songListUI()
 
                 local input
                 repeat
-                    print("from which playlist? (1-" .. #playlists .. ")")
-                    input = tonumber(read())
-                until playlists[input + 1]
+                    print("from which playlist? (1-" .. #playlists - 1 .. ")")
+                    input = read()
+                    if (input == "") then
+                        return
+                    end
+                    input = tonumber(input)
+                until input and playlists[input + 1]
 
-                removeFromPlaylist(playlists[currentPlaylist][num], currentPlaylist)
+                removeFromPlaylist(playlists[currentPlaylist][num + 1], currentPlaylist)
                 --updateCache(playlists, playlistsPath)
             end
         end
@@ -372,9 +380,9 @@ local function playlistsUI()
             if (i == currentPlaylist) then
                 print(">. " .. playlists[i][1])
                 break
+            else
+                print(i-1 .. ". " .. playlists[i][1])
             end
-
-            print(i-1 .. ". " .. playlists[i][1])
         end
     end
 
@@ -644,7 +652,11 @@ local function songPlayerUI()
                     local song = songQueue[queuePos]
                     table.remove(songQueue, queuePos)
                     -- shuffle remaining queue (sort with random comparator lmao)
-                    table.sort(songQueue, function(a, b) return (math.random() < 0.5) end)
+                    local function randomComparator(a, b)
+                        math.randomseed()
+                        return math.random() < 0.5
+                    end
+                    table.sort(songQueue, randomComparator)
                     -- insert current song at beginning of new queue
                     table.insert(songQueue, 1, song)
                     queuePos = 1
