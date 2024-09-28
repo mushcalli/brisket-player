@@ -16,8 +16,6 @@ local playlistsPath = "caches/playlists.txt"
 local songList = {}
 local playlists = {}
 
-local sortedPlaylists = {}
-
 -- constants
 local bytesPerSecond = 6000 -- 48kHz cc: tweaked speakers, dfpwm has 1 bit samples
 local screenWidth = term.getSize()
@@ -64,35 +62,11 @@ local function updatePlaylistsOnSongDelete(removedSongIndex)
     removedSongIndex = tonumber(removedSongIndex)
 
     for i, line in ipairs(playlists) do
-        local songInPlaylist = false
-
-        -- binary search sorted playlist
-        local sorted = sortedPlaylists[i]
-        local k , j = 1, #sorted
-        while (j > k) do
-            if (tonumber(sorted[k]) == removedSongIndex or tonumber(sorted[j]) == removedSongIndex) then
-                songInPlaylist = true
-                break
-            end
-
-            local mid = math.floor(k + (j/2))
-            if (removedSongIndex < tonumber(sorted[mid])) then
-                j = mid - 1
-            elseif (removedSongIndex > tonumber(sorted[mid])) then
-                k = mid + 1
-            else
-                songInPlaylist = true
-                break
-            end
-        end
-
-        if (songInPlaylist) then
-            local songs = { table.unpack(line, 2) }
-            for i, song in ipairs(songs) do
-                local id = tonumber(song)
-                if (id > removedSongIndex) then
-                    line[i] = id - 1;
-                end
+        local songs = { table.unpack(line, 2) }
+        for i, song in ipairs(songs) do
+            local id = tonumber(song)
+            if (id > removedSongIndex) then
+                line[i] = id - 1;
             end
         end
     end
@@ -232,7 +206,9 @@ local function songListUI()
         --songList[#songList+1][2] = input
 
         table.insert(songList, {input1, input2})
-        table.insert(playlists[currentPlaylist], #songList)
+        if (currentPlaylist > 1) then
+            table.insert(playlists[currentPlaylist], #songList)
+        end
 
         updateCache(songList, songListPath)
         updatePlaylistsOnNewSong()
@@ -700,13 +676,6 @@ readCache(playlists, playlistsPath)
 playlists[1] = {"songs"}
 for i=1, #songList do
     table.insert(playlists[1], i)
-end
-
--- generate sortedPlaylists for faster contains check
-for i, line in ipairs(playlists) do
-    local sortedLine = { table.unpack(line, 2) }
-    table.sort(sortedLine)
-    sortedPlaylists[i] = sortedLine
 end
 
 -- initialize with the global playlist open
