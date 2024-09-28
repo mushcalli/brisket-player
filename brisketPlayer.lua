@@ -3,7 +3,7 @@ if (not speaker) then error("error: speaker not found") end
 
 local success, urlPlayer = pcall(require, "urlPlayer")
 if (not success) then
-    shell.run("wget https://raw.githubusercontent.com/noodle2521/brisket-player/refs/heads/dev/urlPlayer.lua urlPlayer.lua")
+    shell.run("wget https://raw.githubusercontent.com/noodle2521/brisket-player/refs/heads/main/urlPlayer.lua urlPlayer.lua")
     urlPlayer = require("urlPlayer")
 end
 
@@ -116,6 +116,8 @@ local function removeFromPlaylist(removedSongIndex, playlistIndex)
             table.remove(playlists[playlistIndex], i)
         end
     end
+
+    updateCache(playlists, playlistsPath)
 end
 
 -- generates new song queue from current playlist
