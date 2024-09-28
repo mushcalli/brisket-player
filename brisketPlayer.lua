@@ -65,6 +65,7 @@ local function updatePlaylistsOnSongDelete(removedSongIndex)
         local songs = { table.unpack(line, 2) }
         for i, song in ipairs(songs) do
             local id = tonumber(song)
+            print(id .. ", " .. removedSongIndex)
             if (id == removedSongIndex) then
                 table.remove(line, i + 1)
             end
@@ -485,7 +486,7 @@ local function songPlayerUI()
 
     local songLength = math.floor(audioByteLength / bytesPerSecond)
 
-    local continue = false
+    --local continue = false
     local paused = false
     local playbackOffset = 0
     local lastChunkByteOffset = 0
@@ -526,7 +527,7 @@ local function songPlayerUI()
     end
 
     local function songUI()
-        continue = false
+        --continue = false
 
         local key, keyPressed
         local timer = os.startTimer(1)
@@ -612,7 +613,8 @@ local function songPlayerUI()
                 end
 
                 os.queueEvent("song_interrupt")
-                continue = true
+                --continue = true
+                return
             end
             if (key == keys.k) then
                 if (queuePos < #songQueue) then
@@ -622,7 +624,8 @@ local function songPlayerUI()
                 end
 
                 os.queueEvent("song_interrupt")
-                continue = true
+                --continue = true
+                return
             end
             if (key == keys.r) then
                 if (not shuffle) then
@@ -653,16 +656,17 @@ local function songPlayerUI()
             if (key == keys.x) then
                 os.queueEvent("song_interrupt")
                 uiLayer = 1
-                continue = true
+                --continue = true
+                return
             end
         end
     end
 
 
-    repeat
+    while true do
         parallel.waitForAny(playSong, songUI, updateLastChunk)
-    until continue
-    os.sleep(0.5)
+    end
+    --os.sleep(0.5)
 end
 
 
