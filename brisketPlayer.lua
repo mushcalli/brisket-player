@@ -3,7 +3,7 @@ if (not speaker) then error("error: speaker not found") end
 
 local success, urlPlayer = pcall(require, "urlPlayer")
 if (not success) then
-    shell.run("wget https://raw.githubusercontent.com/noodle2521/brisket-player/refs/heads/main/url-player.lua urlPlayer.lua")
+    shell.run("wget https://raw.githubusercontent.com/noodle2521/brisket-player/refs/heads/dev/urlPlayer.lua urlPlayer.lua")
     urlPlayer = require("urlPlayer")
 end
 
@@ -24,7 +24,8 @@ local screenWidth = term.getSize()
 
 --- ui variables
 local uiLayer = 1
-local pageOffset = 0
+local songPageOffset = 0
+local playlistPageOffset = 0
 local songQueue = {}
 local queuePos = 1
 local currentPlaylist
@@ -58,7 +59,7 @@ local function readCache(cacheTable, path)
     end
 end
 
-local function updatePlaylists(removedIndex)
+local function updatePlaylistsOnSongDelete(removedSongIndex)
     for i, line in ipairs(playlists) do
         local songInPlaylist = false
 
@@ -66,15 +67,15 @@ local function updatePlaylists(removedIndex)
         local sorted = sortedPlaylists[i]
         local k , j = 1, #sorted
         while (j > k) do
-            if (sorted[k] == removedIndex or sorted[j] == removedIndex) then
+            if (sorted[k] == removedSongIndex or sorted[j] == removedSongIndex) then
                 songInPlaylist = true
                 break
             end
 
             local mid = math.floor(k + (j/2))
-            if (removedIndex < mid) then
+            if (removedSongIndex < mid) then
                 j = mid - 1
-            elseif (removedIndex > mid) then
+            elseif (removedSongIndex > mid) then
                 k = mid + 1
             else
                 songInPlaylist = true
@@ -86,7 +87,7 @@ local function updatePlaylists(removedIndex)
             local songs = { table.unpack(line, 2) }
             for i, song in ipairs(songs) do
                 local id = tonumber(song)
-                if (id > removedIndex) then
+                if (id > removedSongIndex) then
                     line[i] = id - 1;
                 end
             end
@@ -94,12 +95,23 @@ local function updatePlaylists(removedIndex)
     end
 end
 
+local function removeFromPlaylist(removedSongIndex, playlistIndex)
+    -- original playlist isnt sorted and might have duplicates of songs, just linear search ig
+    for i = 2, #playlists[playlistIndex] do
+        if (playlists[playlistIndex][i] == removedSongIndex) then
+            table.remove(playlists[playlistIndex], i)
+        end
+    end
+end
+
 -- generates new song queue from current playlist
 local function refreshSongQueue()
-    local currentSongIDs = { table.unpack(playlists[currentPlaylist], 2) }
+    local currentSongIndexes = { table.unpack(playlists[currentPlaylist], 2) }
     songQueue = {}
-    for i, id in currentSongIDs do
-        table.insert(songQueue, songList[id])
+    for i, id in currentSongIndexes do
+        local song = songList[id]
+        table.insert(song, i) -- append song's original queue position to restore upon unshuffling
+        table.insert(songQueue, song)
     end
 end
 
@@ -140,7 +152,7 @@ local function songListUI()
     if (#songQueue == 0) then
         print("none")
     else
-        local start = (pageOffset) * 10 + 1
+        local start = (songPageOffset) * 10 + 1
         for i = start, start + 9 do
             if (not songQueue[i]) then
                 break
@@ -150,15 +162,16 @@ local function songListUI()
         end
     end
 
-    print("\n\n1-0: play song, J,K: page down/up, A: add song, E: edit song, D: delete song, P: add to playlist, tab: playlists menu, X: exit")
+    print("\n\n1-0: play song, J,K: page down/up, N: new song, E: edit song, D: delete song, A,R: add/remove from playlist, tab: playlists menu, X: exit")
 
     local event, key = os.pullEvent("key_up")
+
     local digit = keyToDigit(key)
     if (digit == 0) then
         digit = 10
     end
-    if (digit >= 0 and #songQueue ~= 0) then
-        local num = digit + (pageOffset * 10)
+    if (digit > 0 and #songQueue ~= 0) then
+        local num = digit + (songPageOffset * 10)
 
         if (songQueue[num]) then
             -- enter songPlayerUI
@@ -166,14 +179,15 @@ local function songListUI()
             queuePos = num
         end
     end
+
     -- jrop and klimb :relieved:
     if (key == keys.j) then
-        pageOffset = math.min(pageOffset + 1, maxSongPage)
+        songPageOffset = math.min(songPageOffset + 1, maxSongPage)
     end
     if (key == keys.k) then
-        pageOffset = math.max(pageOffset - 1, 0)
+        songPageOffset = math.max(songPageOffset - 1, 0)
     end
-    if (key == keys.a) then
+    if (key == keys.n) then
         term.clear()
 
         print("new song title (spaces fine, pls no | thats my string separator):")
@@ -211,8 +225,8 @@ local function songListUI()
         if (_digit == 0) then
             _digit = 10
         end
-        if (_digit >= 0 and #songQueue > 0) then
-            local num = _digit + (pageOffset * 10)
+        if (_digit > 0 and #songQueue > 0) then
+            local num = _digit + (songPageOffset * 10)
 
             if (songQueue[num]) then
                 term.clear()
@@ -245,19 +259,20 @@ local function songListUI()
         if (_digit == 0) then
             _digit = 10
         end
-        if (_digit >= 0 and #songQueue > 0) then
-            local num = _digit + (pageOffset * 10)
+        if (_digit > 0 and #songQueue > 0) then
+            local num = _digit + (songPageOffset * 10)
 
             if (songQueue[num]) then
                 print("removing " .. songQueue[num][1])
                 table.remove(songList, playlists[currentPlaylist][num + 1])
+                updatePlaylistsOnSongDelete(playlists[currentPlaylist][num + 1])
                 updateCache(songList, songListPath)
-                updatePlaylists(playlists[currentPlaylist][num + 1])
+                updateCache(playlists, playlistsPath)
                 os.sleep(1)
             end
         end
     end
-    if (key == keys.p) then
+    if (key == keys.a) then
         if (#playlists == 0) then
             print("no playlists found")
             return
@@ -269,8 +284,8 @@ local function songListUI()
         if (_digit == 0) then
             _digit = 10
         end
-        if (_digit >= 0 and #songQueue > 0) then
-            local num = _digit + (pageOffset * 10)
+        if (_digit > 0 and #songQueue > 0) then
+            local num = _digit + (songPageOffset * 10)
 
             if (songQueue[num]) then
                 term.clear()
@@ -286,6 +301,35 @@ local function songListUI()
             end
         end
     end
+    if (key == keys.r) then
+        if (#playlists == 0) then
+            print("no playlists found")
+            return
+        end
+
+        print("which one? (1-0)")
+        local event, key = os.pullEvent("key_up")
+        local _digit = keyToDigit(key)
+        if (_digit == 0) then
+            _digit = 10
+        end
+        if (_digit > 0 and #songQueue > 0) then
+            local num = _digit + (songPageOffset * 10)
+
+            if (songQueue[num]) then
+                term.clear()
+
+                local input
+                repeat
+                    print("from which playlist? (1-" .. #playlists .. ")")
+                    input = tonumber(read())
+                until playlists[input + 1]
+
+                removeFromPlaylist(playlists[currentPlaylist][num], currentPlaylist)
+                updateCache(playlists, playlistsPath)
+            end
+        end
+    end
     if (key == keys.tab) then
         -- enter playlistsUI
         uiLayer = 2
@@ -297,7 +341,120 @@ end
 
 
 local function playlistsUI()
-    --
+    local maxPlaylistPage = math.ceil((#playlists - 1) / 10) - 1
+
+    print("playlists:\n")
+
+    if (#playlists <= 1) then
+        print("none")
+    else
+        local start = (playlistPageOffset) * 10 + 2
+        for i = start, start + 9 do
+            if (not playlists[i]) then
+                break
+            end
+
+            if (i == currentPlaylist - 1) then
+                print(" > " .. playlists[i][1])
+                break
+            end
+
+            print(i .. ". " .. playlists[i][1])
+        end
+    end
+
+    print("\n\n1-0: select playlist, backspace: clear selection, J,K: page down/up, N: new playlist, E: rename playlist, D: delete playlist, tab: back to song list")
+
+    local event, key = os.pullEvent("key_up")
+
+    local digit = keyToDigit(key)
+    if (digit == 0) then
+        digit = 10
+    end
+    if (digit > 0 and #playlists > 1) then
+        local num = digit + (playlistPageOffset * 10) + 1
+
+        if (playlists[num]) then
+            currentPlaylist = num
+        end
+    end
+
+    if (key == keys.backspace) then
+        currentPlaylist = 1
+    end
+    -- jrop and klimb yet again
+    if (key == keys.j) then
+        playlistPageOffset = math.min(playlistPageOffset + 1, maxPlaylistPage)
+    end
+    if (key == keys.k) then
+        playlistPageOffset = math.max(playlistPageOffset - 1, 0)
+    end
+    if (key == keys.n) then
+        term.clear()
+
+        print("new playlist name (spaces fine, pls no | thats my string separator):")
+        local input1 = read()
+        if (input1 == "") then
+            return
+        end
+        while (string.find(input1, "%|")) do
+            print(">:(")
+            input1 = read()
+        end
+
+        table.insert(playlists, {input1})
+
+        updateCache(playlists, playlistsPath)
+    end
+    if (key == keys.e) then
+        print("which one? (1-0)")
+        local event, key = os.pullEvent("key_up")
+        local _digit = keyToDigit(key)
+        if (_digit == 0) then
+            _digit = 10
+        end
+        if (_digit > 0 and #playlists > 1) then
+            local num = _digit + (playlistPageOffset * 10) + 1
+
+            if (playlists[num]) then
+                term.clear()
+
+                print("new playlist name (spaces fine, pls no | thats my string separator):")
+                local currentName = playlists[num][1]
+                local input1
+                repeat
+                    input1 = read()
+                    if (input1 == "") then input1 = currentName end
+                until not string.find(input1, "%|")
+                
+                playlists[num][1] = input1
+
+                updateCache(playlists, playlistsPath)
+            end
+        end
+    end
+    if (key == keys.d) then
+        print("which one? (1-0)")
+        local event, key = os.pullEvent("key_up")
+        local _digit = keyToDigit(key)
+        if (_digit == 0) then
+            _digit = 10
+        end
+        if (_digit > 0 and #playlists > 0) then
+            local num = _digit + (playlistPageOffset * 10) + 1
+
+            if (playlists[num]) then
+                print("removing " .. playlists[num][1])
+                table.remove(playlists, num)
+                updateCache(playlists, playlistsPath)
+                os.sleep(1)
+            end
+        end
+    end
+    if (key == keys.tab) then
+        -- enter songListUI
+        uiLayer = 1
+    end
 end
 
 
@@ -465,10 +622,13 @@ local function songPlayerUI()
                     queuePos = 1
                 else
                     shuffle = false
+
+                    -- restore queuePos to currently playing song
+                    queuePos = songQueue[queuePos][3]
+
                     -- restore queue order from current playlist
                     refreshSongQueue()
                 end
-                
             end
             if (key == keys.x) then
                 os.queueEvent("song_interrupt")
@@ -484,6 +644,8 @@ local function songPlayerUI()
     until continue
     os.sleep(0.5)
 end
+
+
 
 
 ---- main
