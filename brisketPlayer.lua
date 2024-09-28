@@ -160,6 +160,8 @@ local function songListUI()
     -- populate songQueue from current playlist
     refreshSongQueue()
 
+    shuffle = false
+
     local playlistName = playlists[currentPlaylist][1]
     local maxSongPage = math.ceil(#songQueue / 10) - 1
 
