@@ -60,6 +60,8 @@ local function readCache(cacheTable, path)
 end
 
 local function updatePlaylistsOnSongDelete(removedSongIndex)
+    removedSongIndex = tonumber(removedSongIndex)
+
     for i, line in ipairs(playlists) do
         local songInPlaylist = false
 
@@ -67,15 +69,15 @@ local function updatePlaylistsOnSongDelete(removedSongIndex)
         local sorted = sortedPlaylists[i]
         local k , j = 1, #sorted
         while (j > k) do
-            if (sorted[k] == removedSongIndex or sorted[j] == removedSongIndex) then
+            if (tonumber(sorted[k]) == removedSongIndex or tonumber(sorted[j]) == removedSongIndex) then
                 songInPlaylist = true
                 break
             end
 
             local mid = math.floor(k + (j/2))
-            if (removedSongIndex < mid) then
+            if (removedSongIndex < tonumber(sorted[mid])) then
                 j = mid - 1
-            elseif (removedSongIndex > mid) then
+            elseif (removedSongIndex > tonumber(sorted[mid])) then
                 k = mid + 1
             else
                 songInPlaylist = true
@@ -96,9 +98,12 @@ local function updatePlaylistsOnSongDelete(removedSongIndex)
 end
 
 local function removeFromPlaylist(removedSongIndex, playlistIndex)
+    removedSongIndex = tonumber(removedSongIndex)
+    playlistIndex = tonumber(playlistIndex)
+
     -- original playlist isnt sorted and might have duplicates of songs, just linear search ig
     for i = 2, #playlists[playlistIndex] do
-        if (playlists[playlistIndex][i] == removedSongIndex) then
+        if (tonumber(playlists[playlistIndex][i]) == removedSongIndex) then
             table.remove(playlists[playlistIndex], i)
         end
     end
@@ -108,8 +113,8 @@ end
 local function refreshSongQueue()
     local currentSongIndexes = { table.unpack(playlists[currentPlaylist], 2) }
     songQueue = {}
-    for i, id in currentSongIndexes do
-        local song = songList[id]
+    for i, id in ipairs(currentSongIndexes) do
+        local song = songList[tonumber(id)]
         table.insert(song, i) -- append song's original queue position to restore upon unshuffling
         table.insert(songQueue, song)
     end
@@ -232,7 +237,7 @@ local function songListUI()
                 term.clear()
 
                 print("new song title (spaces fine, pls no | thats my string separator):")
-                local song = songList[playlists[currentPlaylist][num + 1]]
+                local song = songList[tonumber(playlists[currentPlaylist][num + 1])]
                 local input1
                 repeat
                     input1 = read()
@@ -246,7 +251,7 @@ local function songListUI()
                     if (input2 == "") then input2 = song[2] end
                 until not string.find(input2, "%|")
                 
-                songList[playlists[currentPlaylist][num + 1]] = {input1, input2}
+                songList[tonumber(playlists[currentPlaylist][num + 1])] = {input1, input2}
 
                 updateCache(songList, songListPath)
             end
@@ -264,7 +269,7 @@ local function songListUI()
 
             if (songQueue[num]) then
                 print("removing " .. songQueue[num][1])
-                table.remove(songList, playlists[currentPlaylist][num + 1])
+                table.remove(songList, tonumber(playlists[currentPlaylist][num + 1]))
                 updatePlaylistsOnSongDelete(playlists[currentPlaylist][num + 1])
                 updateCache(songList, songListPath)
                 updateCache(playlists, playlistsPath)
@@ -296,7 +301,7 @@ local function songListUI()
                     input = tonumber(read())
                 until playlists[input + 1]
 
-                table.insert(playlists[input + 1], playlists[currentPlaylist][num])
+                table.insert(playlists[input + 1], tonumber(playlists[currentPlaylist][num]))
                 updateCache(playlists, playlistsPath)
             end
         end
@@ -354,12 +359,12 @@ local function playlistsUI()
                 break
             end
 
-            if (i == currentPlaylist - 1) then
+            if (i == currentPlaylist) then
                 print(" > " .. playlists[i][1])
                 break
             end
 
-            print(i .. ". " .. playlists[i][1])
+            print(i-1 .. ". " .. playlists[i][1])
         end
     end
 
@@ -531,11 +536,13 @@ local function songPlayerUI()
         end
 
 
-        local prevTitle = songQueue[queuePos - 1][1] or songQueue[#songQueue][1]
+        local prevTitle
+        if (songQueue[queuePos - 1]) then prevTitle = songQueue[queuePos - 1][1] else prevTitle = songQueue[#songQueue][1] end
         if (#prevTitle > 9) then
             prevTitle = string.sub(prevTitle, 1, 7) .. ".."
         end
-        local nextTitle = songQueue[queuePos + 1][1] or songQueue[1][1]
+        local nextTitle
+        if (songQueue[queuePos + 1]) then nextTitle = songQueue[queuePos + 1][1] else nextTitle = songQueue[1][1] end
         if (#nextTitle > 9) then
             nextTitle = string.sub(nextTitle, 1, 7) .. ".."
         end
@@ -543,7 +550,6 @@ local function songPlayerUI()
         
         while true do
             repeat
-                parallel.waitForAny(pullKeyEvent, secondTimer)
                 term.clear()
                 print(title)
 
@@ -557,6 +563,8 @@ local function songPlayerUI()
                 print("\nspace: pause, 0-9: seek, A,D: back/forward 10s, J,K: prev/next song, R: shuffle(" .. (shuffle and "x" or " ") .. "), X: exit")
 
                 print("\n\n" .. queueString)
+
+                parallel.waitForAny(pullKeyEvent, secondTimer)
             until keyPressed
             keyPressed = false
 
@@ -618,7 +626,7 @@ local function songPlayerUI()
                     -- shuffle remaining queue (sort with random comparator lmao)
                     table.sort(songQueue, function(a, b) return (math.random() < 0.5) end)
                     -- insert current song at beginning of new queue
-                    table.insert(songQueue, song, 1)
+                    table.insert(songQueue, 1, song)
                     queuePos = 1
                 else
                     shuffle = false
