@@ -122,7 +122,8 @@ local function refreshSongQueue()
     local currentSongIndexes = { table.unpack(playlists[currentPlaylist], 2) }
     songQueue = {}
     for i, id in ipairs(currentSongIndexes) do
-        local song = songList[tonumber(id)]
+        local song = {}
+        table.move(songList[tonumber(id)], 1, 2, 1, song)
         table.insert(song, i) -- append song's original queue position to restore upon unshuffling
         table.insert(songQueue, song)
     end
