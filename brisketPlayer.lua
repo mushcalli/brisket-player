@@ -69,7 +69,7 @@ local function updatePlaylistsOnSongDelete(removedSongIndex)
                 table.remove(line, i + 1)
             end
             if (id > removedSongIndex) then
-                line[i] = id - 1;
+                line[i + 1] = id - 1;
             end
         end
     end
