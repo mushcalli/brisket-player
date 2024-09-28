@@ -28,6 +28,7 @@ local songPageOffset = 0
 local playlistPageOffset = 0
 local songQueue = {}
 local queuePos = 1
+local shuffle = false
 local currentPlaylist
 
 
@@ -379,7 +380,6 @@ local function playlistsUI()
 
             if (i == currentPlaylist) then
                 print(">. " .. playlists[i][1])
-                break
             else
                 print(i-1 .. ". " .. playlists[i][1])
             end
@@ -503,7 +503,6 @@ local function songPlayerUI()
     local songLength = math.floor(audioByteLength / bytesPerSecond)
 
     local continue = false
-    local shuffle = false
     local paused = false
     local playbackOffset = 0
     local lastChunkByteOffset = 0
@@ -562,19 +561,6 @@ local function songPlayerUI()
 
             timer = os.startTimer(1)
         end
-
-
-        local prevTitle
-        if (songQueue[queuePos - 1]) then prevTitle = songQueue[queuePos - 1][1] else prevTitle = songQueue[#songQueue][1] end
-        if (#prevTitle > 9) then
-            prevTitle = string.sub(prevTitle, 1, 7) .. ".."
-        end
-        local nextTitle
-        if (songQueue[queuePos + 1]) then nextTitle = songQueue[queuePos + 1][1] else nextTitle = songQueue[1][1] end
-        if (#nextTitle > 9) then
-            nextTitle = string.sub(nextTitle, 1, 7) .. ".."
-        end
-        local queueString = "< " .. prevTitle .. string.rep(" ", screenWidth - #nextTitle - #prevTitle - 4) .. nextTitle .. " >"
         
         while true do
             repeat
@@ -590,6 +576,17 @@ local function songPlayerUI()
 
                 print("\nspace: pause, 0-9: seek, A,D: back/forward 10s, J,K: prev/next song, R: shuffle(" .. (shuffle and "x" or " ") .. "), X: exit")
 
+                local prevTitle
+                if (songQueue[queuePos - 1]) then prevTitle = songQueue[queuePos - 1][1] else prevTitle = songQueue[#songQueue][1] end
+                if (#prevTitle > 9) then
+                    prevTitle = string.sub(prevTitle, 1, 7) .. ".."
+                end
+                local nextTitle
+                if (songQueue[queuePos + 1]) then nextTitle = songQueue[queuePos + 1][1] else nextTitle = songQueue[1][1] end
+                if (#nextTitle > 9) then
+                    nextTitle = string.sub(nextTitle, 1, 7) .. ".."
+                end
+                local queueString = "< " .. prevTitle .. string.rep(" ", screenWidth - #nextTitle - #prevTitle - 4) .. nextTitle .. " >"
                 print("\n\n" .. queueString)
 
                 parallel.waitForAny(pullKeyEvent, secondTimer)
