@@ -3,7 +3,7 @@ if (not speaker) then error("error: speaker not found") end
 
 local success, urlPlayer = pcall(require, "urlPlayer")
 if (not success) then
-    shell.run("wget https://raw.githubusercontent.com/noodle2521/brisket-player/refs/heads/main/urlPlayer.lua urlPlayer.lua")
+    shell.run("wget https://raw.githubusercontent.com/noodle2521/brisket-player/refs/heads/dev/urlPlayer.lua urlPlayer.lua")
     urlPlayer = require("urlPlayer")
 end
 
@@ -481,8 +481,8 @@ local function songPlayerUI()
     local title = songQueue[queuePos][1]
     local url = songQueue[queuePos][2]
 
-    local allowSeek, audioByteLength = urlPlayer.pollUrl(url)
-    if (allowSeek == nil) then
+    local supportsPartialRequests, audioByteLength = urlPlayer.pollUrl(url)
+    if (supportsPartialRequests == nil) then
         return
     end
 
@@ -496,7 +496,7 @@ local function songPlayerUI()
 
     local function playSong()
         if (not paused) then
-            local interrupt = urlPlayer.playFromUrl(url, "song_interrupt", "chunk_queued", playbackOffset, allowSeek, audioByteLength)
+            local interrupt = urlPlayer.playFromUrl(url, "song_interrupt", "chunk_queued", playbackOffset, supportsPartialRequests, audioByteLength)
             if (not interrupt) then
                 if (queuePos < #songQueue) then
                     queuePos = queuePos + 1
@@ -517,7 +517,7 @@ local function songPlayerUI()
     end
 
     local function seek(newOffset)
-        if (allowSeek) then
+        --if (supportsPartialRequests) then
             os.queueEvent("song_interrupt")
 
             local clampedOffset = math.max(0, math.min(newOffset, audioByteLength - 1))
@@ -525,7 +525,7 @@ local function songPlayerUI()
 
             lastChunkByteOffset = clampedOffset
             --lastChunkTime = os.clock()
-        end
+        --end
     end
 
     local function songUI()
@@ -558,6 +558,7 @@ local function songPlayerUI()
                 print("\n|" .. string.rep("-", songPos) .. "o" .. string.rep("-", screenWidth - 2 - songPos - 1) .. "|")
                 -- song time display
                 local songTime = math.floor(lastChunkByteOffset / bytesPerSecond)
+                print(lastChunkByteOffset)
                 print(string.format("%02d:%02d / %02d:%02d", math.floor(songTime / 60), math.floor(math.fmod(songTime, 60)), math.floor(songLength / 60), math.floor(math.fmod(songLength, 60))))
 
                 print("\nspace: pause, 0-9: seek, A,D: back/forward 10s, J,K: prev/next song, R: shuffle(" .. (shuffle and "x" or " ") .. "), X: exit")
