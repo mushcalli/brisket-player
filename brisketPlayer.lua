@@ -3,7 +3,7 @@ if (not speaker) then error("error: speaker not found") end
 
 local success, urlPlayer = pcall(require, "urlPlayer")
 if (not success) then
-    shell.run("wget https://raw.githubusercontent.com/noodle2521/brisket-player/refs/heads/dev/urlPlayer.lua urlPlayer.lua")
+    shell.run("wget https://raw.githubusercontent.com/mushcalli/brisket-player/refs/heads/dev/urlPlayer.lua urlPlayer.lua")
     urlPlayer = require("urlPlayer")
 end
 
