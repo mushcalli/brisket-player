@@ -3,7 +3,7 @@ if (not speaker) then error("error: speaker not found") end
 
 local success, urlPlayer = pcall(require, "urlPlayer")
 if (not success) then
-    shell.run("wget https://raw.githubusercontent.com/noodle2521/brisket-player/refs/heads/main/urlPlayer.lua urlPlayer.lua")
+    shell.run("wget https://raw.githubusercontent.com/mushcalli/brisket-player/refs/heads/dev/urlPlayer.lua urlPlayer.lua")
     urlPlayer = require("urlPlayer")
 end
 
@@ -15,8 +15,6 @@ local playlistsPath = "caches/playlists.txt"
 -- cache tables
 local songList = {}
 local playlists = {}
-
-local sortedPlaylists = {}
 
 -- constants
 local bytesPerSecond = 6000 -- 48kHz cc: tweaked speakers, dfpwm has 1 bit samples
@@ -63,36 +61,18 @@ end
 local function updatePlaylistsOnSongDelete(removedSongIndex)
     removedSongIndex = tonumber(removedSongIndex)
 
-    for i, line in ipairs(playlists) do
-        local songInPlaylist = false
-
-        -- binary search sorted playlist
-        local sorted = sortedPlaylists[i]
-        local k , j = 1, #sorted
-        while (j > k) do
-            if (tonumber(sorted[k]) == removedSongIndex or tonumber(sorted[j]) == removedSongIndex) then
-                songInPlaylist = true
-                break
+    for _, line in ipairs(playlists) do
+        local songs = { table.unpack(line, 2) }
+        for i, song in ipairs(songs) do
+            local id = tonumber(song)
+            print(id .. ", " .. removedSongIndex)
+            if (id == removedSongIndex) then
+                table.remove(line, i + 1)
+                print("removed")
             end
-
-            local mid = math.floor(k + (j/2))
-            if (removedSongIndex < tonumber(sorted[mid])) then
-                j = mid - 1
-            elseif (removedSongIndex > tonumber(sorted[mid])) then
-                k = mid + 1
-            else
-                songInPlaylist = true
-                break
-            end
-        end
-
-        if (songInPlaylist) then
-            local songs = { table.unpack(line, 2) }
-            for i, song in ipairs(songs) do
-                local id = tonumber(song)
-                if (id > removedSongIndex) then
-                    line[i] = id - 1;
-                end
+            if (id > removedSongIndex) then
+                line[i + 1] = id - 1;
+                print("decremented")
             end
         end
     end
@@ -232,7 +212,9 @@ local function songListUI()
         --songList[#songList+1][2] = input
 
         table.insert(songList, {input1, input2})
-        table.insert(playlists[currentPlaylist], #songList)
+        if (currentPlaylist > 1) then
+            table.insert(playlists[currentPlaylist], #songList)
+        end
 
         updateCache(songList, songListPath)
         updatePlaylistsOnNewSong()
@@ -499,14 +481,14 @@ local function songPlayerUI()
     local title = songQueue[queuePos][1]
     local url = songQueue[queuePos][2]
 
-    local allowSeek, audioByteLength = urlPlayer.pollUrl(url)
-    if (allowSeek == nil) then
+    local supportsPartialRequests, audioByteLength = urlPlayer.pollUrl(url)
+    if (supportsPartialRequests == nil) then
         return
     end
 
     local songLength = math.floor(audioByteLength / bytesPerSecond)
 
-    local continue = false
+    local exit = false
     local paused = false
     local playbackOffset = 0
     local lastChunkByteOffset = 0
@@ -514,7 +496,7 @@ local function songPlayerUI()
 
     local function playSong()
         if (not paused) then
-            local interrupt = urlPlayer.playFromUrl(url, "song_interrupt", "chunk_queued", playbackOffset, allowSeek, audioByteLength)
+            local interrupt = urlPlayer.playFromUrl(url, "song_interrupt", "chunk_queued", playbackOffset, supportsPartialRequests, audioByteLength)
             if (not interrupt) then
                 if (queuePos < #songQueue) then
                     queuePos = queuePos + 1
@@ -535,7 +517,7 @@ local function songPlayerUI()
     end
 
     local function seek(newOffset)
-        if (allowSeek) then
+        --if (supportsPartialRequests) then
             os.queueEvent("song_interrupt")
 
             local clampedOffset = math.max(0, math.min(newOffset, audioByteLength - 1))
@@ -543,11 +525,11 @@ local function songPlayerUI()
 
             lastChunkByteOffset = clampedOffset
             --lastChunkTime = os.clock()
-        end
+        --end
     end
 
     local function songUI()
-        continue = false
+        exit = false
 
         local key, keyPressed
         local timer = os.startTimer(1)
@@ -576,6 +558,7 @@ local function songPlayerUI()
                 print("\n|" .. string.rep("-", songPos) .. "o" .. string.rep("-", screenWidth - 2 - songPos - 1) .. "|")
                 -- song time display
                 local songTime = math.floor(lastChunkByteOffset / bytesPerSecond)
+                print(lastChunkByteOffset)
                 print(string.format("%02d:%02d / %02d:%02d", math.floor(songTime / 60), math.floor(math.fmod(songTime, 60)), math.floor(songLength / 60), math.floor(math.fmod(songLength, 60))))
 
                 print("\nspace: pause, 0-9: seek, A,D: back/forward 10s, J,K: prev/next song, R: shuffle(" .. (shuffle and "x" or " ") .. "), X: exit")
@@ -633,7 +616,7 @@ local function songPlayerUI()
                 end
 
                 os.queueEvent("song_interrupt")
-                continue = true
+                exit = true
             end
             if (key == keys.k) then
                 if (queuePos < #songQueue) then
@@ -643,7 +626,7 @@ local function songPlayerUI()
                 end
 
                 os.queueEvent("song_interrupt")
-                continue = true
+                exit = true
             end
             if (key == keys.r) then
                 if (not shuffle) then
@@ -674,7 +657,7 @@ local function songPlayerUI()
             if (key == keys.x) then
                 os.queueEvent("song_interrupt")
                 uiLayer = 1
-                continue = true
+                exit = true
             end
         end
     end
@@ -682,8 +665,8 @@ local function songPlayerUI()
 
     repeat
         parallel.waitForAny(playSong, songUI, updateLastChunk)
-    until continue
-    os.sleep(0.5)
+    until exit
+    --os.sleep(0.5)
 end
 
 
@@ -700,13 +683,6 @@ readCache(playlists, playlistsPath)
 playlists[1] = {"songs"}
 for i=1, #songList do
     table.insert(playlists[1], i)
-end
-
--- generate sortedPlaylists for faster contains check
-for i, line in ipairs(playlists) do
-    local sortedLine = { table.unpack(line, 2) }
-    table.sort(sortedLine)
-    sortedPlaylists[i] = sortedLine
 end
 
 -- initialize with the global playlist open

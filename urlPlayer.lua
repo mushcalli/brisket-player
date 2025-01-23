@@ -8,9 +8,44 @@ local urlPlayer = {}
 
 -- (chunkSize can be decreased on faster internet connections for faster initial buffering on song playback, or increased on slower ones for more consistent playback)
 -- (max 16 * 1024)
-urlPlayer.chunkSize = 16 * 1024
+urlPlayer.chunkSize = 8 * 1024
 
 
+-- returns (success, response) or (true, nil) on interrupt
+-- interruptableGet(audioUrl, ?interruptEvent) will get entire file instead
+local function interruptableGet(audioUrl, interruptEvent, rangeStart, rangeEnd)
+    if (not rangeStart and not rangeEnd) then
+        http.request({url = audioUrl, method = "GET"})
+        local event, url, response
+        repeat
+            event, url, response = os.pullEvent()
+        until ((event == "http_success" or event == "http_failure") and url == audioUrl) or event == interruptEvent
+        if (event == "http_failure") then
+            return false, response
+        end
+        if (event == interruptEvent) then
+            return true, nil
+        end
+
+        return true, response
+    end
+
+    http.request({url = audioUrl, method = "GET", headers = {["Range"] = "bytes=" .. rangeStart .. "-" .. rangeEnd}})
+    local event, url, response
+    repeat
+        event, url, response = os.pullEvent()
+    until ((event == "http_success" or event == "http_failure") and url == audioUrl) or event == interruptEvent
+    if (event == "http_failure") then
+        return false, response
+    end
+    if (event == interruptEvent) then
+        return true, nil
+    end
+
+    return true, response
+end
+
+-- returns true on interrupt
 local function playChunk(chunk, interruptEvent)
     local buf = decoder(chunk)
     while not speaker.playAudio(buf) do
@@ -38,18 +73,42 @@ local function streamFromUrl(audioUrl, startOffset, audioByteLength, interruptEv
     local prev_i
     --local maxByteOffset = urlPlayer.chunkSize * math.floor(audioByteLength / urlPlayer.chunkSize)
     local maxByteOffset = audioByteLength - math.fmod(audioByteLength, urlPlayer.chunkSize)
-
     local rangeEnd = math.min(i + urlPlayer.chunkSize - 1, audioByteLength - 1)
+
+    local success, response = interruptableGet(audioUrl, interruptEvent, i, rangeEnd)
+    if (not success) then
+        print("get failed :( \"" .. response .. "\"")
+        return false
+    end
+    if (not response) then -- was interrupted
+        speaker.stop()
+        return true
+    end
+    local chunkHandle = response
+
     --local chunkHandle, chunkErr = http.get(audioUrl, {["If-Unmodified-Since"] = startTimestamp, ["Range"] = "bytes=0-" .. rangeEnd})
-    local chunkHandle, chunkErr = http.get(audioUrl, {["Range"] = "bytes=" .. i .. "-" .. rangeEnd})
+    --local chunkHandle, chunkErr = http.get(audioUrl, {["Range"] = "bytes=" .. i .. "-" .. rangeEnd})
+
     if (audioByteLength - startOffset > urlPlayer.chunkSize) then
         prev_i = i
         i = i + urlPlayer.chunkSize
         rangeEnd = math.min((i + urlPlayer.chunkSize) - 1, audioByteLength - 1)
+
+        success, response = interruptableGet(audioUrl, interruptEvent, i, rangeEnd)
+        if (not success) then
+            print("get failed :( \"" .. response .. "\"")
+            return false
+        end
+        if (not response) then -- was interrupted
+            return true
+        end
+        local nextChunkHandle = response
+
         --local nextChunkHandle, nextErr = http.get(audioUrl, {["If-Unmodified-Since"] = startTimestamp, ["Range"] = "bytes=" .. i .. "-" .. rangeEnd})
-        local nextChunkHandle, nextErr = http.get(audioUrl, {["Range"] = "bytes=" .. i .. "-" .. rangeEnd})
+        --local nextChunkHandle, nextErr = http.get(audioUrl, {["Range"] = "bytes=" .. i .. "-" .. rangeEnd})
         while (i <= maxByteOffset) do
-            -- return if get error
+            --[[
+            -- return on get error
             if (not chunkHandle) then
                 print("get failed :( \"" .. chunkErr .. "\"")
                 if (nextChunkHandle) then
@@ -62,6 +121,8 @@ local function streamFromUrl(audioUrl, startOffset, audioByteLength, interruptEv
                 chunkHandle.close()
                 return false
             end
+            ]]
+
             --[[if (chunkHandle.getResponseCode() == 412 or nextChunkHandle.getResponseCode() == 412) then
                 print("get failed: file modified :(")
                 chunkHandle.close()
@@ -75,26 +136,11 @@ local function streamFromUrl(audioUrl, startOffset, audioByteLength, interruptEv
                 return false
             end
 
-            --[[local chunk = chunkHandle.readAll()
-            local buf = decoder(chunk)
-            while (not speaker.playAudio(buf)) do
-                local event, data = os.pullEvent()
-        
-                if (interruptEvent) then
-                    if (event == interruptEvent) then
-                        speaker.stop()
-                        chunkHandle.close()
-                        nextChunkHandle.close()
-                        return
-                    end
-                end
-            end]]
 
             -- play chunk once speaker can receieve it, catch interrupts
             -- (chunk run time ~2.7s for default chunkSize of 16kb)
             local chunk = chunkHandle.readAll()
-
-            local interrupt = playChunk(chunk, interruptEvent)
+            interrupt = playChunk(chunk, interruptEvent)
             if (interrupt) then
                 chunkHandle.close()
                 nextChunkHandle.close()
@@ -111,8 +157,20 @@ local function streamFromUrl(audioUrl, startOffset, audioByteLength, interruptEv
             prev_i = i
             i = i + urlPlayer.chunkSize
             rangeEnd = math.min(i + urlPlayer.chunkSize - 1, audioByteLength - 1)
+
+            success, response = interruptableGet(audioUrl, interruptEvent, i, rangeEnd)
+            if (not success) then
+                print("get failed :( \"" .. response .. "\"")
+                return false
+            end
+            if (not response) then -- was interrupted
+                speaker.stop()
+                return true
+            end
+            nextChunkHandle = response
+
             --nextChunkHandle, nextErr = http.get(audioUrl, {["If-Unmodified-Since"] = startTimestamp, ["Range"] = "bytes=" .. i .. "-" .. rangeEnd})
-            nextChunkHandle, nextErr = http.get(audioUrl, {["Range"] = "bytes=" .. i .. "-" .. rangeEnd})
+            --nextChunkHandle, nextErr = http.get(audioUrl, {["Range"] = "bytes=" .. i .. "-" .. rangeEnd})
         end
     end
 
@@ -137,7 +195,6 @@ function urlPlayer.playFromUrl(audioUrl, interruptEvent, chunkQueuedEvent, start
     speaker = peripheral.find("speaker")
     if (not speaker) then error("error: speaker not found") end
 
-    -- startOffset will be ignored if partial requests aren't supported, the song will just be played from the beginning
     startOffset = startOffset or 0
 
     -- if not provided, poll url for usePartialRequests, audioByteLength
@@ -164,14 +221,18 @@ function urlPlayer.playFromUrl(audioUrl, interruptEvent, chunkQueuedEvent, start
         return interrupt
     else
         --- play from single get request
-        local response = http.get(audioUrl)
-        if (not response) then
-            print("get request failed :(")
-            return
+        local success, response = interruptableGet(audioUrl, interruptEvent)
+        if (not success) then
+            print("get failed :( \"" .. response .. "\"")
+            return false
+        end
+        if (not response) then -- was interrupted
+            return true
         end
 
+        local _ = response.read(startOffset) -- discard unwanted bytes
+        local i = startOffset
         local chunk = response.read(urlPlayer.chunkSize)
-        local i = 0
         while (chunk) do
             if (chunkQueuedEvent) then
                 os.queueEvent(chunkQueuedEvent, i, math.floor(os.clock()))
@@ -194,9 +255,9 @@ function urlPlayer.playFromUrl(audioUrl, interruptEvent, chunkQueuedEvent, start
     end
 end
 
---- returns { supportsPartialRequests, audioByteLength }
--- { false, nil } if partial requests not supported
--- { nil, err } if error (invalid url/get failed)
+--- returns (supportsPartialRequests, audioByteLength)
+-- (false, nil) if partial requests not supported
+-- (nil, err) if error (invalid url/get failed)
 function urlPlayer.pollUrl(audioUrl)
     -- head request
     http.request({url = audioUrl, method = "HEAD"})
