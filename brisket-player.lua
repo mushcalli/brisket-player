@@ -1,10 +1,10 @@
 local speaker = peripheral.find("speaker")
 if (not speaker) then error("error: speaker not found") end
 
-local success, urlPlayer = pcall(require, "urlPlayer")
+local success, urlPlayer = pcall(require, "url-player")
 if (not success) then
-    shell.run("wget https://raw.githubusercontent.com/mushcalli/brisket-player/refs/heads/dev/urlPlayer.lua urlPlayer.lua")
-    urlPlayer = require("urlPlayer")
+    shell.run("wget https://raw.githubusercontent.com/mushcalli/brisket-player/refs/heads/dev/url-player.lua url-player.lua")
+    urlPlayer = require("url-player")
 end
 
 
