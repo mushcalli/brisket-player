@@ -28,7 +28,9 @@ brisket-player [segment size (in bytes)]
 The backend urlPlayer API will be installed when the program is run for the first time
 ### urlPlayer API
 
-`wget https://github.com/mushcalli/brisket-player/raw/main/url-player.lua`
+```
+wget https://github.com/mushcalli/brisket-player/raw/main/url-player.lua
+```
 
 #### To import in Lua:
 ```lua
