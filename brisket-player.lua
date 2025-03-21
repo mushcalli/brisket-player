@@ -1,10 +1,10 @@
 local speaker = peripheral.find("speaker")
 if (not speaker) then error("error: speaker not found") end
 
-local success, urlPlayer = pcall(require, "urlPlayer")
+local success, urlPlayer = pcall(require, "url-player")
 if (not success) then
-    shell.run("wget https://raw.githubusercontent.com/mushcalli/brisket-player/refs/heads/dev/urlPlayer.lua urlPlayer.lua")
-    urlPlayer = require("urlPlayer")
+    shell.run("wget https://raw.githubusercontent.com/mushcalli/brisket-player/refs/heads/dev/url-player.lua url-player.lua")
+    urlPlayer = require("url-player")
 end
 
 
@@ -558,8 +558,10 @@ local function songPlayerUI()
                 print("\n|" .. string.rep("-", songPos) .. "o" .. string.rep("-", screenWidth - 2 - songPos - 1) .. "|")
                 -- song time display
                 local songTime = math.floor(lastChunkByteOffset / bytesPerSecond)
-                print(lastChunkByteOffset)
                 print(string.format("%02d:%02d / %02d:%02d", math.floor(songTime / 60), math.floor(math.fmod(songTime, 60)), math.floor(songLength / 60), math.floor(math.fmod(songLength, 60))))
+                
+                -- DEBUG
+                --print(lastChunkByteOffset)
 
                 print("\nspace: pause, 0-9: seek, A,D: back/forward 10s, J,K: prev/next song, R: shuffle(" .. (shuffle and "x" or " ") .. "), X: exit")
 
