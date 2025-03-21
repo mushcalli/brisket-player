@@ -675,6 +675,16 @@ end
 
 
 ---- main
+local args = {...}
+if (args[1]) then
+    local chunkSize = math.tointeger(args[1])
+    if (not chunkSize) then
+        error("usage: brisket-player [segment size (in bytes)]")
+    end
+
+    urlPlayer.chunkSize = chunkSize
+end
+
 -- read from song_list.txt if exists
 readCache(songList, songListPath)
 
