@@ -10,8 +10,8 @@ a music streaming app for playing DFPWM files in CC:Tweaked (ver 1.100 and up)
 
 ## Screenshots:
 <p align="middle">
-  <img src=https://github.com/user-attachments/assets/2f4c5171-b27b-4693-8e38-100f69db524e width="500" />
-  <img src=https://github.com/user-attachments/assets/eb554b3a-6ea9-459a-a092-57b757ed31aa width="500" />
+  <img src=https://github.com/user-attachments/assets/2f4c5171-b27b-4693-8e38-100f69db524e width="400" />
+  <img src=https://github.com/user-attachments/assets/eb554b3a-6ea9-459a-a092-57b757ed31aa width="400" />
 </p>
 
 ## Installation and Usage:
