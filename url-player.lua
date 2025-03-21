@@ -257,7 +257,7 @@ end
 
 --- returns (supportsPartialRequests, audioByteLength)
 -- (false, nil) if partial requests not supported
--- (nil, err) if error (invalid url/get failed)
+-- nil if error (invalid url/get failed)
 function urlPlayer.pollUrl(audioUrl)
     -- head request
     http.request({url = audioUrl, method = "HEAD"})
