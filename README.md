@@ -61,6 +61,7 @@ Polls audioUrl for whether it supports partial GET requests, and if it does also
   - (false, nil) if partial requests not supported
   - nil if error (invalid url/get failed)
 
+## License
 [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
 
 This work is licensed under a
