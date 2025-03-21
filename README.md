@@ -16,11 +16,14 @@ a music streaming app for playing DFPWM files in CC:Tweaked (ver 1.100 and up)
 
 ## Installation and Usage:
 ### brisket-player
-`wget https://github.com/mushcalli/brisket-player/raw/main/brisket-player.lua`
+```
+wget https://github.com/mushcalli/brisket-player/raw/main/brisket-player.lua
+```
 
 #### To run:
-
-`brisket-player [segment size (in bytes)]`
+```
+brisket-player [segment size (in bytes)]
+```
 
 The backend urlPlayer API will be installed when the program is run for the first time
 ### urlPlayer API
