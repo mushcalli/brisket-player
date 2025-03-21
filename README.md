@@ -23,8 +23,7 @@ a music streaming app for playing DFPWM files in CC:Tweaked (ver 1.100 and up)
 `brisket-player [segment size (in bytes)]`
 
 The backend urlPlayer API will be installed when the program is run for the first time
-<details>
-<summary><h3>urlPlayer API</h3></summary>
+### urlPlayer API
 
 `wget https://github.com/mushcalli/brisket-player/raw/main/url-player.lua`
 
@@ -45,7 +44,7 @@ Plays the DFPWM file at audioUrl, in segments if the source accepts partial GET 
 - returns true on interrupt, false otherwise
 - chunkQueuedEvent: optional, if given will emit a dataless OS event with this name every time a new segment of audio is queued to the speaker
 - startOffset: optional, if given will start playback from the startOffset'th byte of the file
-- usePartialRequests: optional, usually found via an internal urlPlayer.pollUrl() call, but if given will skip the call and use the given value for efficiency when audioUrl has already been polled externally
+- usePartialRequests: optional, usually found via an internal urlPlayer.pollUrl() call, but if given will skip the call and use the given value, only to be used for efficiency when audioUrl has already been polled externally
 - audioByteLength: optional, see above
 <br><br>
 
@@ -56,7 +55,6 @@ Polls audioUrl for whether it supports partial GET requests, and if it does also
 - returns (bool supportsPartialRequests, int audioByteLength)
   - (false, nil) if partial requests not supported
   - nil if error (invalid url/get failed)
-</details>
 
 [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
 
