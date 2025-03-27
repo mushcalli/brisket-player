@@ -65,14 +65,11 @@ local function updatePlaylistsOnSongDelete(removedSongIndex)
         local songs = { table.unpack(line, 2) }
         for i, song in ipairs(songs) do
             local id = tonumber(song)
-            print(id .. ", " .. removedSongIndex)
             if (id == removedSongIndex) then
                 table.remove(line, i + 1)
-                print("removed")
             end
             if (id > removedSongIndex) then
                 line[i + 1] = id - 1;
-                print("decremented")
             end
         end
     end
