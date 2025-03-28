@@ -55,6 +55,8 @@ local function readCache(cacheTable, path)
             line = file.readLine()
             i = i + 1
         end
+
+        file.close()
     end
 end
 
@@ -155,15 +157,15 @@ local function songListUI()
             end
             
             local title = songQueue[i][1]
-            if (#title + #tostring(i) + 1 > 26) then
-                title = string.sub(title, 1, 26 - #tostring(i) - 4) .. "..."
+            if (#title + #tostring(i) + 1 > screenWidth) then
+                title = string.sub(title, 1, screenWidth - #tostring(i) - 4) .. "..."
             end
 
             print(i .. "." .. title)
         end
     end
 
-    print("\n\n1-0: play, J/K: down/up, N: new, E: edit, D: delete, A/R: add/remove, tab: playlists, X: exit")
+    print("\n\n1-0: play, J/K: down/up, N: new, E: edit, D: delete, A: add, R: remove, tab: playlists, X: exit")
 
     local event, key = os.pullEvent("key_up")
 
@@ -366,15 +368,20 @@ local function playlistsUI()
                 break
             end
 
+            local title = playlists[i][1]
+            if (#title + #tostring(i) + 1 > screenWidth) then
+                title = string.sub(title, 1, screenWidth - #tostring(i) - 4) .. "..."
+            end
+
             if (i == currentPlaylist) then
-                print(">. " .. playlists[i][1])
+                print(">." .. title)
             else
-                print(i-1 .. ". " .. playlists[i][1])
+                print(i-1 .. "." .. title)
             end
         end
     end
 
-    print("\n\n1-0: select playlist, backspace: clear selection, J,K: page down/up, N: new playlist, E: rename playlist, D: delete playlist, tab: back to song list")
+    print("\n\n1-0: select, backspace: deselect, J/K: down/up, N: new, E: rename, D: delete, tab: song list")
 
     local event, key = os.pullEvent("key_up")
 
@@ -505,6 +512,8 @@ local function songPlayerUI()
                 else
                     queuePos = 1
                 end
+
+                exit = true
             end
         else
             os.pullEvent("song_interrupt")
@@ -514,20 +523,16 @@ local function songPlayerUI()
     local function updateLastChunk()
         while true do
             _, lastChunkByteOffset, _ = os.pullEvent("chunk_queued")
-            lastChunkByteOffset = math.max(lastChunkByteOffset - urlPlayer.chunkSize, 0) -- awful nightmare duct tape solution to fix pausing but it is what it is
         end
     end
 
     local function seek(newOffset)
-        --if (supportsPartialRequests) then
             os.queueEvent("song_interrupt")
 
             local clampedOffset = math.max(0, math.min(newOffset, audioByteLength - 1))
             playbackOffset = clampedOffset
 
             lastChunkByteOffset = clampedOffset
-            --lastChunkTime = os.clock()
-        --end
     end
 
     local function songUI()
@@ -565,7 +570,7 @@ local function songPlayerUI()
                 -- DEBUG
                 --print(lastChunkByteOffset)
 
-                print("\nspace: pause, 0-9: seek, A,D: back/forward 10s, J,K: prev/next song, R: shuffle(" .. (shuffle and "x" or " ") .. "), X: exit")
+                print("\nspace: pause, 0-9: seek, <-/->: skip 10s, A/D: prev/next, S: shuffle(" .. (shuffle and "x" or " ") .. "), X: exit")
 
                 local prevTitle
                 if (songQueue[queuePos - 1]) then prevTitle = songQueue[queuePos - 1][1] else prevTitle = songQueue[#songQueue][1] end
@@ -593,26 +598,26 @@ local function songPlayerUI()
             if (key == keys.space) then
                 paused = not paused
                 if (paused) then
-                    seek(lastChunkByteOffset)
+                    seek(lastChunkByteOffset - urlPlayer.chunkSize)
                 else
                     os.queueEvent("song_interrupt")
                 end
             end
+            if (key == keys.left) then
+                -- estimate offset of current playback
+                --local currentOffset = lastChunkByteOffset + (bytesPerSecond * (math.floor(os.clock()) - lastChunkTime))
+
+                local newOffset = lastChunkByteOffset - (10 * bytesPerSecond)
+                seek(newOffset)
+            end
+            if (key == keys.right) then
+                -- estimate offset of current playback
+                --local currentOffset = lastChunkByteOffset + (bytesPerSecond * (math.floor(os.clock()) - lastChunkTime))
+
+                local newOffset = lastChunkByteOffset + (10 * bytesPerSecond)
+                seek(newOffset)
+            end
             if (key == keys.a) then
-                -- estimate offset of current playback
-                --local currentOffset = lastChunkByteOffset + (6000 * (math.floor(os.clock()) - lastChunkTime))
-
-                local newOffset = lastChunkByteOffset - (10 * 6000)
-                seek(newOffset)
-            end
-            if (key == keys.d) then
-                -- estimate offset of current playback
-                --local currentOffset = lastChunkByteOffset + (6000 * (math.floor(os.clock()) - lastChunkTime))
-
-                local newOffset = lastChunkByteOffset + (10 * 6000)
-                seek(newOffset)
-            end
-            if (key == keys.j) then
                 if (queuePos > 1) then
                     queuePos = queuePos - 1
                 else
@@ -622,7 +627,7 @@ local function songPlayerUI()
                 os.queueEvent("song_interrupt")
                 exit = true
             end
-            if (key == keys.k) then
+            if (key == keys.d) then
                 if (queuePos < #songQueue) then
                     queuePos = queuePos + 1
                 else
@@ -632,19 +637,23 @@ local function songPlayerUI()
                 os.queueEvent("song_interrupt")
                 exit = true
             end
-            if (key == keys.r) then
+            if (key == keys.s) then
                 if (not shuffle) then
                     shuffle = true
                     --- shuffle queue, will be reset to regular order upon return to songListUI
                     -- remove current song from queue before shuffling
                     local song = songQueue[queuePos]
                     table.remove(songQueue, queuePos)
-                    -- shuffle remaining queue (sort with random comparator lmao)
-                    local function randomComparator(a, b)
-                        math.randomseed()
-                        return math.random() < 0.5
+
+                    -- shuffle remaining queue (vaguely fisher-yates)
+                    math.randomseed(os.clock())
+                    for i = #songQueue, 2, -1 do
+                        local j = math.random(i)
+                        if (j ~= i) then
+                            songQueue[i], songQueue[j] = songQueue[j], songQueue[i]
+                        end
                     end
-                    table.sort(songQueue, randomComparator)
+
                     -- insert current song at beginning of new queue
                     table.insert(songQueue, 1, song)
                     queuePos = 1
