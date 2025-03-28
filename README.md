@@ -2,7 +2,7 @@
 a music streaming app for playing DFPWM files in CC:Tweaked (ver 1.100 and up)
 
 ## Features:
-- Plays DFPWM files of any size from web-hosted raw media links (like from [here](https://github.com/mushcalli/computercraft/tree/main/dfpwm-files/music))
+- Plays DFPWM files of any size from web-hosted raw media/download links (like from [here](https://github.com/mushcalli/computercraft/tree/main/dfpwm-files/music))
 - Customizable song list and playlists
 - Pausing, seeking, and shuffling
 - Keyboard-based UI
@@ -10,8 +10,8 @@ a music streaming app for playing DFPWM files in CC:Tweaked (ver 1.100 and up)
 
 ## Screenshots:
 <p align="middle">
-  <img src=https://github.com/user-attachments/assets/2f4c5171-b27b-4693-8e38-100f69db524e width="400" />
-  <img src=https://github.com/user-attachments/assets/eb554b3a-6ea9-459a-a092-57b757ed31aa width="400" />
+  <img src=https://github.com/user-attachments/assets/61936365-805b-481b-a558-086d84c775e4 width="400" />
+  <img src=https://github.com/user-attachments/assets/1aec76cb-1598-43e7-9033-005773eb82c3 width="400" />
 </p>
 
 ## Installation and Usage:
