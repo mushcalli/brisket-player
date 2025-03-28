@@ -158,7 +158,7 @@ local function songListUI()
         end
     end
 
-    print("\n\n1-0: play song, J,K: page down/up, N: new song, E: edit song, D: delete song, A,R: add/remove from playlist, tab: playlists menu, X: exit")
+    print("\n\n1-0: play, J,K: ^/v, N: new, E: edit, D: del, A,R: add/remove from playlist, tab: playlists, X: exit")
 
     local event, key = os.pullEvent("key_up")
 
