@@ -146,7 +146,7 @@ local function songListUI()
     local playlistName = playlists[currentPlaylist][1]
     local maxSongPage = math.ceil(#songQueue / 10) - 1
 
-    print(playlistName .. ":\n")
+    print(playlistName .. "\n")
     if (#songQueue == 0) then
         print("none")
     else
@@ -571,19 +571,22 @@ local function songPlayerUI()
                 --print(lastChunkByteOffset)
 
                 print("\nspace: pause, 0-9: seek, <-/->: skip 10s, A/D: prev/next, S: shuffle(" .. (shuffle and "x" or " ") .. "), X: exit")
+                print()
 
                 local prevTitle
                 if (songQueue[queuePos - 1]) then prevTitle = songQueue[queuePos - 1][1] else prevTitle = songQueue[#songQueue][1] end
-                if (#prevTitle > 9) then
-                    prevTitle = string.sub(prevTitle, 1, 7) .. ".."
+                if (#prevTitle > screenWidth - 8) then
+                    prevTitle = string.sub(prevTitle, 1, screenWidth - 11) .. "..."
                 end
+                print("< " .. prevTitle)
+
+
                 local nextTitle
                 if (songQueue[queuePos + 1]) then nextTitle = songQueue[queuePos + 1][1] else nextTitle = songQueue[1][1] end
-                if (#nextTitle > 9) then
-                    nextTitle = string.sub(nextTitle, 1, 7) .. ".."
+                if (#nextTitle > screenWidth - 8) then
+                    nextTitle = string.sub(nextTitle, 1, screenWidth - 11) .. ".."
                 end
-                local queueString = "< " .. prevTitle .. string.rep(" ", screenWidth - #nextTitle - #prevTitle - 4) .. nextTitle .. " >"
-                print("\n\n" .. queueString)
+                print(string.rep(" ", screenWidth - #nextTitle - 2) .. nextTitle .. " >")
 
                 parallel.waitForAny(pullKeyEvent, secondTimer)
             until keyPressed
