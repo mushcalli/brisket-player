@@ -209,7 +209,7 @@ function urlPlayer.playFromUrl(audioUrl, interruptEvent, chunkQueuedEvent, start
         audioByteLength = polledLength
     end
 
-    if (startOffset < 0 or startOffset > audioByteLength - 1) then
+    if (startOffset < 0 or (usePartialRequessts and startOffset > audioByteLength - 1)) then
         print("invalid startOffset (" .. startOffset .. ")")
         return false
     end
