@@ -156,7 +156,7 @@ local function songListUI()
             
             local title = songQueue[i][1]
             if (#title + #tostring(i) > 26) then
-                title = string.sub(title, 1, 26 - #tostring(i) - 3) .. "..."
+                title = string.sub(title, 1, 26 - #tostring(i) - 4) .. "..."
             end
 
             print(i .. "." .. title)
