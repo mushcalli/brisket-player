@@ -153,8 +153,13 @@ local function songListUI()
             if (not songQueue[i]) then
                 break
             end
+            
+            local title = songQueue[i][1]
+            if (#title + 2 > 26) then
+                title = string.sub(title, 1, 21) .. "..."
+            end
 
-            print(i .. "." .. songQueue[i][1])
+            print(i .. "." .. title)
         end
     end
 
