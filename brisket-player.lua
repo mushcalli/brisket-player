@@ -158,7 +158,7 @@ local function songListUI()
             
             local title = songQueue[i][1]
             if (#title + #tostring(i) + 1 > screenWidth) then
-                title = string.sub(title, 1, screenWidth - #tostring(i) - 4) .. "..."
+                title = string.sub(title, 1, screenWidth - #tostring(i) - 3) .. ".."
             end
 
             print(i .. "." .. title)
@@ -370,7 +370,7 @@ local function playlistsUI()
 
             local title = playlists[i][1]
             if (#title + #tostring(i) + 1 > screenWidth) then
-                title = string.sub(title, 1, screenWidth - #tostring(i) - 4) .. "..."
+                title = string.sub(title, 1, screenWidth - #tostring(i) - 3) .. ".."
             end
 
             if (i == currentPlaylist) then
@@ -571,22 +571,21 @@ local function songPlayerUI()
                 --print(lastChunkByteOffset)
 
                 print("\nspace: pause, 0-9: seek, <-/->: skip 10s, A/D: prev/next, S: shuffle(" .. (shuffle and "x" or " ") .. "), X: exit")
-                print()
-
-                local prevTitle
-                if (songQueue[queuePos - 1]) then prevTitle = songQueue[queuePos - 1][1] else prevTitle = songQueue[#songQueue][1] end
-                if (#prevTitle > screenWidth - 8) then
-                    prevTitle = string.sub(prevTitle, 1, screenWidth - 11) .. "..."
-                end
-                print("< " .. prevTitle)
-
+                --print()
 
                 local nextTitle
                 if (songQueue[queuePos + 1]) then nextTitle = songQueue[queuePos + 1][1] else nextTitle = songQueue[1][1] end
-                if (#nextTitle > screenWidth - 8) then
-                    nextTitle = string.sub(nextTitle, 1, screenWidth - 11) .. ".."
+                if (#nextTitle > screenWidth - 12) then
+                    nextTitle = string.sub(nextTitle, 1, screenWidth - 14) .. ".."
                 end
                 print(string.rep(" ", screenWidth - #nextTitle - 2) .. nextTitle .. " >")
+
+                local prevTitle
+                if (songQueue[queuePos - 1]) then prevTitle = songQueue[queuePos - 1][1] else prevTitle = songQueue[#songQueue][1] end
+                if (#prevTitle > screenWidth - 12) then
+                    prevTitle = string.sub(prevTitle, 1, screenWidth - 14) .. ".."
+                end
+                print("< " .. prevTitle)
 
                 parallel.waitForAny(pullKeyEvent, secondTimer)
             until keyPressed
