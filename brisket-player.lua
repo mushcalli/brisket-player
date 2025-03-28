@@ -154,11 +154,11 @@ local function songListUI()
                 break
             end
 
-            print(i .. ". " .. songQueue[i][1])
+            print(i .. "." .. songQueue[i][1])
         end
     end
 
-    print("\n\n1-0 >,J/K v/^,N new,E edit,D del,A/R add/remove,Tab playlists,X exit")
+    print("\n\n1-0 >,J/K v^,N new,E edit,D del,A/R add/remove,Tab playlists,X exit")
 
     local event, key = os.pullEvent("key_up")
 
